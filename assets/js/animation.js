@@ -1,14 +1,9 @@
 var canvas = document.getElementById("mycanvas");
 var ctx = canvas.getContext("2d");
+var w, h;
+var lines = [];
 
-window.onresize = function() {
-  w = ctx.canvas.width = window.innerWidth;
-  h = ctx.canvas.height = window.innerHeight;
-};window.onresize();
-
-lines = [];
-
-conf = {
+var conf = {
   hue: 5,
   shadow: false,
   width: 1,
@@ -19,122 +14,112 @@ conf = {
   maxLines: 300
 };
 
-bgDots = [
-  {
-    rad: (w+h)/2,
-    x: w/2,
-    y: 0,
-    hue: 0
-  },
-  {
-    rad: (w+h)/2,
-    x: 0,
-    y: h,
-    hue: -45
-  },
-  {
-    rad: (w+h)/2,
-    x: w,
-    y: h,
-    hue: -90
-  }
+var bgDots = [
+  { rad: (w + h) / 2, x: w / 2, y: 0, hue: 0 },
+  { rad: (w + h) / 2, x: 0, y: h, hue: -45 },
+  { rad: (w + h) / 2, x: w, y: h, hue: -90 }
 ];
 
-function emitLine(){
-  if(conf.maxLines < lines.length)
-    return;
-  for(var i = 0; i < conf.emitNum; i++){
-    var rx = Math.random() * w + 100;
-    var ry = Math.random() * h - 100;
-    lines.push({
-      x1: rx,
-      y1: ry,
-      x2: rx,
-      y2: ry,
-      length: (Math.random() * (260 - 80) + 80) * conf.length,
-      width: (Math.random() * (15 - 5) + 5) * conf.width,
-      v1: (Math.random() * (4 - 2) + 2) * conf.speed,
-      v2: (Math.random() * (1 - 0.5) + 0.5) * conf.speed,
-      half: false,
-      hue: Math.random() * 50
-    });
+function emitLine() {
+  if (conf.maxLines < lines.length) return;
+
+  for (var i = 0; i < conf.emitNum; i++) {
+    var rx = Math.random() * (w + 100);
+    var ry = Math.random() * (h - 100);
+    var length = (Math.random() * 180 + 80) * conf.length;
+    var width = (Math.random() * 10 + 5) * conf.width;
+    var v1 = (Math.random() * 2 + 2) * conf.speed;
+    var v2 = (Math.random() * 0.5 + 0.5) * conf.speed;
+
+    lines.push({ x1: rx, y1: ry, x2: rx, y2: ry, length, width, v1, v2, half: false, hue: Math.random() * 50 });
   }
 }
 
-function drawBackground(){
+function drawBackground() {
   ctx.globalCompositeOperation = "lighter";
-  for(var i = 0; i < bgDots.length; i++){
-    var grd = ctx.createRadialGradient(bgDots[i].x, bgDots[i].y, 0, bgDots[i].x, bgDots[i].y, bgDots[i].rad);
-    grd.addColorStop(0, "hsla("+ (conf.hue + bgDots[i].hue) +", 100%, 60%, 0.3)");
-    grd.addColorStop(1, "hsla("+ (conf.hue + bgDots[i].hue) +", 100%, 50%, 0)");
+
+  for (var i = 0; i < bgDots.length; i++) {
+    var dot = bgDots[i];
+    var hue = conf.hue + dot.hue;
+    var grd = ctx.createRadialGradient(dot.x, dot.y, 0, dot.x, dot.y, dot.rad);
+    grd.addColorStop(0, `hsla(${hue}, 100%, 60%, 0.3)`);
+    grd.addColorStop(1, `hsla(${hue}, 100%, 50%, 0)`);
+
     ctx.beginPath();
-    ctx.arc(bgDots[i].x, bgDots[i].y, bgDots[i].rad, 0, Math.PI * 2);
+    ctx.arc(dot.x, dot.y, dot.rad, 0, Math.PI * 2);
     ctx.fillStyle = grd;
     ctx.fill();
     ctx.closePath();
   }
 }
 
-function drawLines(){
+function drawLines() {
   ctx.globalCompositeOperation = "lighter";
-  for(var i = 0; i < lines.length; i++){
-    ctx.lineWidth = lines[i].width;
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    ctx.lineWidth = line.width;
     ctx.beginPath();
-    ctx.moveTo(lines[i].x1, lines[i].y1);
-    ctx.lineTo(lines[i].x2, lines[i].y2);
-    ctx.strokeStyle = "hsla("+(conf.hue - lines[i].hue)+", 100%, 50%, " +(conf.opacity)+ ")";
+    ctx.moveTo(line.x1, line.y1);
+    ctx.lineTo(line.x2, line.y2);
+    ctx.strokeStyle = `hsla(${conf.hue - line.hue}, 100%, 50%, ${conf.opacity})`;
     ctx.lineCap = "round";
     ctx.stroke();
     ctx.closePath();
 
-    if(lines[i].half == false){
-      lines[i].x1 -= lines[i].v1;
-      lines[i].y1 += lines[i].v1;
-      lines[i].x2 -= lines[i].v2;
-      lines[i].y2 += lines[i].v2;
-      if(dist(lines[i].x1, lines[i].y1, lines[i].x2, lines[i].y2) > lines[i].length){
-        lines[i].half = true;
+    if (!line.half) {
+      line.x1 -= line.v1;
+      line.y1 += line.v1;
+      line.x2 -= line.v2;
+      line.y2 += line.v2;
+
+      if (dist(line.x1, line.y1, line.x2, line.y2) > line.length) {
+        line.half = true;
       }
-    }else{
-      lines[i].x1 -= lines[i].v2;
-      lines[i].y1 += lines[i].v2;
-      lines[i].x2 -= lines[i].v1;
-      lines[i].y2 += lines[i].v1;
+    } else {
+      line.x1 -= line.v2;
+      line.y1 += line.v2;
+      line.x2 -= line.v1;
+      line.y2 += line.v1;
     }
   }
 }
 
-function clear(){
+function clear() {
   ctx.globalCompositeOperation = "source-over";
-  ctx.beginPath();
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0,0,w,h);
-  ctx.closePath();
+  ctx.clearRect(0, 0, w, h);
 }
 
-function checkLines(){
+function checkLines() {
   emitLine();
-  for(var i = 0; i < lines.length; i++){
-    if(lines[i].half == true && dist(lines[i].x1, lines[i].y1, lines[i].x2, lines[i].y2) <= 10){
-      lines[i] = lines[lines.length - 1];
-      lines.pop();
-    }else if(lines[i].x1 < 0 && lines[i].x2 < 0 && lines[i].y1 > h && lines[i].y2 > h){
-      lines[i] = lines[lines.length - 1];
-      lines.pop();
+
+  for (var i = lines.length - 1; i >= 0; i--) {
+    var line = lines[i];
+    if (line.half && dist(line.x1, line.y1, line.x2, line.y2) <= 10) {
+      lines[i] = lines.pop();
+    } else if (line.x1 < 0 && line.x2 < 0 && line.y1 > h && line.y2 > h) {
+      lines[i] = lines.pop();
     }
   }
 }
 
-generateLines = setInterval(checkLines, 10);
-
-function dist(x1, y1, x2, y2){
-  return Math.sqrt(Math.pow((x2 - x1), 2) + Math.pow((y2 - y1), 2));
+function dist(x1, y1, x2, y2) {
+  return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
 }
 
-function render(){
+function resizeCanvas() {
+  w = canvas.width = window.innerWidth;
+  h = canvas.height = window.innerHeight;
+}
+
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+function render() {
   clear();
   drawBackground();
   drawLines();
   requestAnimationFrame(render);
 }
+
 render();
